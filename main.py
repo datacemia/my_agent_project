@@ -1,10 +1,10 @@
-
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from agents import Runner
 from agent import my_agent
 from dotenv import load_dotenv
+import traceback
 
 load_dotenv()
 
@@ -30,7 +30,6 @@ html_page = """
     <script>
         async function sendMessage() {
             const message = document.getElementById("message").value;
-
             const res = await fetch("/chat", {
                 method: "POST",
                 headers: {
@@ -40,7 +39,7 @@ html_page = """
             });
 
             const data = await res.json();
-            document.getElementById("response").innerText = data.reply;
+            document.getElementById("response").innerText = data.reply || data.error;
         }
     </script>
 </body>
@@ -53,5 +52,10 @@ async def home():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    result = await Runner.run(my_agent, request.message)
-    return {"reply": result.final_output}
+    try:
+        result = await Runner.run(my_agent, request.message)
+        return {"reply": result.final_output}
+    except Exception as e:
+        print("ERROR IN /chat:")
+        traceback.print_exc()
+        return {"error": str(e)}
